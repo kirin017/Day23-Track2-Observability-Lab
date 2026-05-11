@@ -12,6 +12,7 @@ import structlog
 from opentelemetry import trace
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from opentelemetry.instrumentation.requests import RequestsInstrumentor
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
@@ -51,7 +52,7 @@ GPU_UTIL = Gauge(
 tracer = trace.get_tracer(__name__)
 
 
-def setup_otel() -> None:
+def setup_otel(app) -> None:
     """Configure OTLP trace export + FastAPI auto-instrumentation."""
     resource = Resource.create(
         {
@@ -69,11 +70,19 @@ def setup_otel() -> None:
         BatchSpanProcessor(OTLPSpanExporter(endpoint=endpoint, insecure=True))
     )
     trace.set_tracer_provider(provider)
-    # Auto-instrument FastAPI handlers (creates server spans for every route)
-    from fastapi import FastAPI  # local import: only needed at setup
-
-    FastAPIInstrumentor().instrument()
+    # Auto-instrument FastAPI handlers (creates server spans for every route).
+    FastAPIInstrumentor.instrument_app(app)
+    RequestsInstrumentor().instrument()
     _configure_logging()
+
+
+def _add_trace_context(_: object, __: str, event_dict: dict) -> dict:
+    span = trace.get_current_span()
+    ctx = span.get_span_context()
+    if ctx and ctx.is_valid:
+        event_dict.setdefault("trace_id", format(ctx.trace_id, "032x"))
+        event_dict.setdefault("span_id", format(ctx.span_id, "016x"))
+    return event_dict
 
 
 def _configure_logging() -> None:
@@ -87,6 +96,7 @@ def _configure_logging() -> None:
             structlog.contextvars.merge_contextvars,
             structlog.processors.add_log_level,
             structlog.processors.TimeStamper(fmt="iso"),
+            _add_trace_context,
             structlog.processors.JSONRenderer(),
         ],
         wrapper_class=structlog.make_filtering_bound_logger(logging.INFO),

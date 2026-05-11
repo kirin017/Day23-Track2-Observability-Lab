@@ -25,6 +25,24 @@ services:
       retries: 5
     networks: [obs]
 
+  day19-stub:
+    image: day23-track2-observability-lab-app
+    container_name: day23-day19-stub
+    command: ["python", "/work/monitor-day19-vector-store.py"]
+    volumes:
+      - ./05-integration:/work:ro
+    restart: unless-stopped
+    networks: [obs]
+
+  day20-stub:
+    image: day23-track2-observability-lab-app
+    container_name: day23-day20-stub
+    command: ["python", "/work/monitor-day20-llama-cpp.py"]
+    volumes:
+      - ./05-integration:/work:ro
+    restart: unless-stopped
+    networks: [obs]
+
   prometheus:
     image: prom/prometheus:v2.55.0
     container_name: day23-prometheus

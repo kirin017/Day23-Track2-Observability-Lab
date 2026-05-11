@@ -65,6 +65,65 @@ def kl_divergence(reference: np.ndarray, current: np.ndarray, bins: int = 20) ->
     return float(np.sum(ref_p * np.log(ref_p / cur_p)))
 
 
+def write_fallback_html(summary: dict[str, dict[str, float]]) -> Path:
+    """Write a lightweight HTML report when Evidently is unavailable."""
+    rows = "\n".join(
+        (
+            "<tr>"
+            f"<td>{feature}</td>"
+            f"<td>{metrics['psi']}</td>"
+            f"<td>{metrics['kl']}</td>"
+            f"<td>{metrics['ks_stat']}</td>"
+            f"<td>{metrics['ks_pvalue']}</td>"
+            f"<td>{metrics['drift']}</td>"
+            "</tr>"
+        )
+        for feature, metrics in summary.items()
+    )
+    html = f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Day 23 Drift Report</title>
+  <style>
+    body {{ font-family: Arial, sans-serif; margin: 2rem; color: #1f2937; }}
+    table {{ border-collapse: collapse; width: 100%; max-width: 960px; }}
+    th, td {{ border: 1px solid #d1d5db; padding: 0.75rem; text-align: left; }}
+    th {{ background: #f3f4f6; }}
+    .yes {{ color: #b91c1c; font-weight: 700; }}
+    .moderate {{ color: #b45309; font-weight: 700; }}
+    .no {{ color: #047857; font-weight: 700; }}
+  </style>
+</head>
+<body>
+  <h1>Day 23 Drift Report</h1>
+  <p>Fallback HTML generated because the Evidently package is not installed.</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Feature</th>
+        <th>PSI</th>
+        <th>KL</th>
+        <th>KS Stat</th>
+        <th>KS p-value</th>
+        <th>Drift</th>
+      </tr>
+    </thead>
+    <tbody>
+      {rows}
+    </tbody>
+  </table>
+</body>
+</html>
+"""
+    html = html.replace(">yes<", ' class="yes">yes<')
+    html = html.replace(">moderate<", ' class="moderate">moderate<')
+    html = html.replace(">no<", ' class="no">no<')
+    html_path = REPORTS_DIR / "drift-report.html"
+    html_path.write_text(html, encoding="utf-8")
+    return html_path
+
+
 def main() -> int:
     rng = np.random.default_rng(seed=42)
     reference = synth_dataset(rng, shifted=False)
@@ -105,7 +164,9 @@ def main() -> int:
         report.save_html(str(html_path))
         print(f"Wrote: {html_path}")
     except ImportError:
-        print("evidently not installed; skipping HTML report. Install with: pip install evidently")
+        html_path = write_fallback_html(summary)
+        print(f"Wrote fallback HTML report: {html_path}")
+        print("evidently not installed; wrote fallback HTML instead.")
     return 0
 
 

@@ -26,7 +26,7 @@ def real_scrape(url: str) -> None:
 def stub_emit() -> None:
     qdrant_collections = Gauge("day19_qdrant_collections", "Stub: Qdrant collection count")
     qdrant_search_total = Counter("day19_qdrant_search_total", "Stub: Qdrant search calls")
-    start_http_server(9101)
+    start_http_server(9101, addr="0.0.0.0")
     print("Stub Day 19 metrics on :9101 (add to prometheus.yml as 'day19-stub')")
     qdrant_collections.set(3)
     while True:

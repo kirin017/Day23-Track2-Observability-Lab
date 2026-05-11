@@ -29,7 +29,7 @@ def stub_emit() -> None:
     tps = Gauge("day20_llamacpp_tokens_per_second", "Stub: tokens/sec")
     queue = Gauge("day20_llamacpp_queue_depth", "Stub: in-flight requests")
     completions = Counter("day20_llamacpp_completions_total", "Stub: total completions")
-    start_http_server(9102)
+    start_http_server(9102, addr="0.0.0.0")
     print("Stub Day 20 metrics on :9102 (add to prometheus.yml as 'day20-stub')")
     while True:
         tps.set(20 + random.gauss(0, 3))
